@@ -1,0 +1,258 @@
+---
+title: "AppliedEpiProject"
+author: "Matthew Chan"
+date: "11/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(dplyr)
+library(tibble)
+library(stats)
+library(ggplot2)
+library(gtsummary)
+library(arsenal)
+diabetes <- read.csv("diabetes.csv")
+head(diabetes)
+```
+```{r}
+str(diabetes)
+```
+ 
+```{r}
+table(diabetes$diabetesMed)
+```
+```{r}
+diabetes2 <- diabetes%>%
+  filter(insulin != "No") %>%
+  group_by(age) %>%
+  select(age, race, gender, insulin, num_medications, number_diagnoses, number_outpatient, diabetesMed,time_in_hospital, change, readmitted)
+diabetes2
+  
+```
+
+```{r}
+
+diabetes_table <- diabetes %>% 
+ filter(insulin != "No") %>%
+ select(age, gender,  change, readmitted)
+
+list_of_labels <-
+  list(AGE = "Age, yrs",
+       gender = "gender)",
+       change = "Insulin Medical Change Status",
+       readmitted = "Readmissions")
+
+diabetes_table %>% tbl_summary(by = gender,
+                             label = list_of_labels,
+                             missing_text = "(Missing)",
+                             statistic = list(all_continuous() ~"{mean} ({sd})", all_categorical() ~ "{n} ({p}%)")) %>%
+   modify_caption("**Table 1. baseline and overall characteristics stratified by age group**") %>%
+  bold_labels() %>%
+  add_overall()  
+```
+
+```{r}
+ chisq.test(diabetes2$age, diabetes2$change)
+```
+```{r}
+ chisq.test(diabetes2$gender, diabetes2$change)
+```
+
+```{r}
+ t.test(diabetes2$num_medications ~ diabetes2$gender)
+```
+```{r}
+prop.table(table(diabetes2$age, diabetes2$change),1)
+table(diabetes2$gender, diabetes2$change)
+```
+
+ 
+ 
+
+
+```{r}
+library(kableExtra)
+tab2 <- prop.table(table(diabetes2$age, diabetes2$change),1)
+kable(tab2, caption = "**Table 1. Relationship between Insulin Dose Changes for different Age groups **" , align = 'c', booktabs= TRUE, "pipe")
+```
+```{r}
+tab3 <- prop.table(table(diabetes2$gender, diabetes2$change),1)
+kable(tab3, caption = "**Table 2. Relationship between Insulin Dose Changes for different Genders **" , align = 'c', booktabs= TRUE, "pipe")
+```
+
+```{r}
+library(scales)
+plotdata <- diabetes2 %>%
+  group_by(change, age) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+plotdata
+```
+
+```{r}
+ggplot(plotdata, 
+       aes(x =  age,
+           y = pct,
+           fill = change)) + 
+  geom_bar(stat = "identity",
+           position = "fill") +
+  scale_y_continuous(breaks = seq(0, 1, .2), 
+                     label = percent) +
+
+
+  labs(y = "Percent", 
+       fill = "Insulin Dose Change",
+       x = "Age Group Categories",
+       title = "Percentages of Steady, Down, Up for insulin Dose Changes for Different Ages ") +
+  theme_minimal()
+```
+```{r}
+plotdata2 <- diabetes2 %>%
+  group_by(change, gender) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+plotdata2
+```
+```{r}
+ggplot(plotdata2, 
+       aes(x =  gender,
+           y = pct,
+           fill = change)) + 
+  geom_bar(stat = "identity",
+           position = "fill") +
+  scale_y_continuous(breaks = seq(0, 1, .2), 
+                     label = percent) +
+
+
+  labs(y = "Percent", 
+       fill = "Insulin Dose Change",
+       x = "Gender Categories",
+       title = "Percentages of insulin Dose Changes for Genders (Males and Females) ") +
+  theme_minimal()
+```
+ 
+ 
+ `
+ 
+```{r}
+diabetes2$readmission <- diabetes2$readmitted
+#diabetes2$readmission 
+diabetes2$readmission <- ifelse(diabetes2$readmission == "NO", 0, 1)
+diabetes2$readmission
+```
+```{r}
+diabetes2$readmit_status <-  factor(diabetes2$readmission,
+                     levels = c(0,1),
+                     labels = c("No", "Yes"))
+
+```
+ 
+```{r}
+tab4 <- prop.table(table(diabetes2$change, diabetes2$readmit_status),1)
+kable(tab4, caption = "**Table 3. Relationship between Redamission for Insulin Medical Changes **" , align = 'c', booktabs= TRUE, "pipe")
+```
+ 
+ 
+```{r}
+plotdata3 <- diabetes2 %>%
+  group_by(readmit_status, change) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+plotdata3
+```
+ 
+```{r}
+ggplot(plotdata3, 
+       aes(x =  change,
+           y = pct,
+           fill = readmit_status)) + 
+  geom_bar(stat = "identity",
+           position = "fill") +
+  scale_y_continuous(breaks = seq(0, 1, .2), 
+                     label = percent) +
+
+
+  labs(y = "Percent", 
+       fill = "Readmission",
+       x = "Insulin Medication Changes Status",
+       title = "Percentages of Readmissions Insulin Medication Changes ") +
+  theme_minimal()
+```
+```{r}
+plotdata4 <- diabetes2 %>%
+  group_by(readmit_status, age) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+plotdata4
+```
+```{r}
+ggplot(plotdata4, 
+       aes(x =  age,
+           y = pct,
+           fill = readmit_status)) + 
+  geom_bar(stat = "identity",
+           position = "fill") +
+  scale_y_continuous(breaks = seq(0, 1, .2), 
+                     label = percent) +
+
+
+  labs(y = "Percent", 
+       fill = "Readmission",
+       x = "Age Groups",
+       title = "Percentages of Readmissions for age groups ") +
+  theme_minimal()
+```
+```{r}
+chisq.test(diabetes2$readmit_status, diabetes2$age)
+chisq.test(diabetes2$readmit_status, diabetes2$gender)
+chisq.test(diabetes2$readmit_status, diabetes2$change)
+```
+ 
+```{r}
+mod1 <- glm(diabetes2$readmission ~diabetes2$age, family = binomial(link = logit), diabetes2)
+
+# Question 
+
+# Examining the model's coefficient. There is no coefficient given for the lowest level of alcohol use because the lowest level is being used as a reference group. 
+
+summary(mod1)
+
+mod2 <- glm(diabetes2$readmission ~diabetes2$gender, family = binomial(link = logit), diabetes2)
+summary(mod2)
+mod3 <- glm(diabetes2$readmission ~diabetes2$change, family = binomial(link = logit), diabetes2)
+summary(mod3)
+```
+```{r}
+round(exp(coef(mod1)),2)
+confint(mod1)
+```
+
+
+```{r}
+round(exp(coef(mod2)),2)
+```
+
+```{r}
+round(exp(coef(mod3)),2)
+```
+```{r}
+table(diabetes2$age, diabetes2$readmit_status)
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
